@@ -1,6 +1,6 @@
 package com.github.klefstad_teaching.cs122b.movies.model.data;
 
-public class movie {
+public class Movie {
     private long id;
     private String title;
     private Integer year;
@@ -14,7 +14,7 @@ public class movie {
         return id;
     }
 
-    public movie setId(long id) {
+    public Movie setId(long id) {
         this.id = id;
         return this;
     }
@@ -23,7 +23,7 @@ public class movie {
         return title;
     }
 
-    public movie setTitle(String title) {
+    public Movie setTitle(String title) {
         this.title = title;
         return this;
     }
@@ -32,7 +32,7 @@ public class movie {
         return year;
     }
 
-    public movie setYear(Integer year) {
+    public Movie setYear(Integer year) {
         this.year = year;
         return this;
     }
@@ -41,7 +41,7 @@ public class movie {
         return director;
     }
 
-    public movie setDirector(String director) {
+    public Movie setDirector(String director) {
         this.director = director;
         return this;
     }
@@ -50,7 +50,7 @@ public class movie {
         return rating;
     }
 
-    public movie setRating(Double rating) {
+    public Movie setRating(Double rating) {
         this.rating = rating;
         return this;
     }
@@ -59,7 +59,7 @@ public class movie {
         return backdropPath;
     }
 
-    public movie setBackdropPath(String backdropPath) {
+    public Movie setBackdropPath(String backdropPath) {
         this.backdropPath = backdropPath;
         return this;
     }
@@ -68,7 +68,7 @@ public class movie {
         return posterPath;
     }
 
-    public movie setPosterPath(String posterPath) {
+    public Movie setPosterPath(String posterPath) {
         this.posterPath = posterPath;
         return this;
     }
@@ -77,7 +77,7 @@ public class movie {
         return hidden;
     }
 
-    public movie setHidden(Boolean hidden) {
+    public Movie setHidden(Boolean hidden) {
         this.hidden = hidden;
         return this;
     }
