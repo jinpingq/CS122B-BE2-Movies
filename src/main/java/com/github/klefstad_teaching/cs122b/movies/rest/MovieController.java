@@ -1,6 +1,10 @@
 package com.github.klefstad_teaching.cs122b.movies.rest;
 
+import com.github.klefstad_teaching.cs122b.core.security.JWTManager;
+import com.github.klefstad_teaching.cs122b.movies.model.data.Genre;
 import com.github.klefstad_teaching.cs122b.movies.model.data.Movie;
+import com.github.klefstad_teaching.cs122b.movies.model.data.Person;
+import com.github.klefstad_teaching.cs122b.movies.model.response.MovieSearchByIdResponse;
 import com.github.klefstad_teaching.cs122b.movies.model.response.MovieSearchResponse;
 import com.github.klefstad_teaching.cs122b.movies.repo.MovieRepo;
 import com.github.klefstad_teaching.cs122b.movies.util.Validate;
@@ -9,10 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.github.klefstad_teaching.cs122b.core.result.MoviesResults;
 
+import java.text.ParseException;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,16 +45,78 @@ public class MovieController
             @RequestParam Optional<Integer> limit,
             @RequestParam Optional<Integer> page,
             @RequestParam Optional<String> orderby,
-            @RequestParam Optional<String> direction)
-    {
+            @RequestParam Optional<String> direction) throws ParseException {
 
-        List<Movie> movies = repo.movieSearch(title, year, director,genre,
-                limit, page, orderby,direction);
+        List<String> roles = user.getJWTClaimsSet().getStringListClaim(JWTManager.CLAIM_ROLES);
+        List<Movie> movies;
+        Integer limit_val = validate.limitValidate(limit);
+        Integer page_val = validate.pageValidate(page);
+        String direction_str = validate.directionValidate(direction);
+        String orderBy_str = validate.orderByValidate(orderby);
 
-        System.out.println("DIRECTROR: " + director.get());
+        if (roles.contains("ADMIN") || roles.contains("EMPLOYEE"))
+             movies = repo.movieSearch(title, year, director,genre,
+                limit_val, page_val, orderBy_str,direction_str, true);
+        else
+            movies = repo.movieSearch(title, year, director,genre,
+                    limit_val, page_val, orderBy_str,direction_str, false);
+
         MovieSearchResponse response = new MovieSearchResponse();
         response.setMovies(movies);
         response.setResult(MoviesResults.MOVIES_FOUND_WITHIN_SEARCH);
+        return response.toResponse();
+    }
+
+    ///////////////////////////////////
+    @GetMapping("/movie/search/person/{personId}")
+    public ResponseEntity<MovieSearchResponse> movieSearchByPersonId(
+            @AuthenticationPrincipal SignedJWT user,
+            @PathVariable Long personId,
+            @RequestParam Optional<Integer> limit,
+            @RequestParam Optional<Integer> page,
+            @RequestParam Optional<String> orderby,
+            @RequestParam Optional<String> direction) throws ParseException {
+
+        List<String> roles = user.getJWTClaimsSet().getStringListClaim(JWTManager.CLAIM_ROLES);
+        List<Movie> movies;
+        Integer limit_val = validate.limitValidate(limit);
+        Integer page_val = validate.pageValidate(page);
+        String direction_str = validate.directionValidate(direction);
+        String orderBy_str = validate.orderByValidate(orderby);
+
+        if (roles.contains("ADMIN") || roles.contains("EMPLOYEE"))
+            movies = repo.movieSearchPersonId(personId, limit_val, page_val, orderBy_str,direction_str,true);
+        else
+            movies = repo.movieSearchPersonId(personId, limit_val, page_val, orderBy_str,direction_str,false);
+
+        MovieSearchResponse response = new MovieSearchResponse();
+        response.setMovies(movies);
+        response.setResult(MoviesResults.MOVIES_WITH_PERSON_ID_FOUND);
+        return response.toResponse();
+    }
+
+    //////////////////////////////////
+    @GetMapping("/movie/{movieId}")
+    public ResponseEntity<MovieSearchResponse> movieSearchByPersonId(
+            @AuthenticationPrincipal SignedJWT user,
+            @PathVariable Long movieId) throws ParseException {
+
+        List<String> roles = user.getJWTClaimsSet().getStringListClaim(JWTManager.CLAIM_ROLES);
+        Movie movie;
+
+        if (roles.contains("ADMIN") || roles.contains("EMPLOYEE"))
+            movie = repo.movieSearchById(movieId,true);
+
+        else
+            movie = repo.movieSearchById(movieId,false);
+
+        List<Genre> genres = repo.movieSearchForGenre(movieId);
+        List<Person> persons = repo.movieSearchForPerson(movieId);
+        MovieSearchByIdResponse response = new MovieSearchByIdResponse();
+        response.setMoive(movie);
+        response.setGenres(genres);
+        response.setPersons(persons);
+        response.setResult(MoviesResults.MOVIE_WITH_ID_FOUND);
         return response.toResponse();
     }
 }

@@ -8,10 +8,10 @@ import java.util.Locale;
 import static com.github.klefstad_teaching.cs122b.core.result.MoviesResults.*;
 
 public enum MovieOrderBy {
-    MOVIE(" ORDER BY m.title "),
+    TITLE(" ORDER BY m.title "),
     RATING(" ORDER BY m.rating "),
     YEAR(" ORDER BY m.year "),
-    MOVIE_DESC(" ORDER BY m.title DESC "),
+    TITLE_DESC(" ORDER BY m.title DESC "),
     RATING_DESC(" ORDER BY m.rating DESC "),
     YEAR_DESC(" ORDER BY m.year DESC ");
 
@@ -25,19 +25,16 @@ public enum MovieOrderBy {
     {
 //        Locale.ROOT ??
         String str = orderby.toUpperCase(Locale.ROOT) + " " + direction.toUpperCase(Locale.ROOT);
-        if (! (str.contains("ASC") || str.contains("DESC")))
-            throw new ResultError(INVALID_DIRECTION);
-
         switch (str)
         {
-            case "MOVIE ASC":
-                return MOVIE;
+            case "TITLE ASC":
+                return TITLE;
             case "RATING ASC":
                 return RATING;
             case "YEAR ASC":
                 return YEAR;
-            case "MOVIE DESC":
-                return MOVIE_DESC;
+            case "TITLE DESC":
+                return TITLE_DESC;
             case "RATING DESC":
                 return RATING_DESC;
             case "YEAR DESC":
@@ -47,3 +44,4 @@ public enum MovieOrderBy {
             }
         }
 }
+

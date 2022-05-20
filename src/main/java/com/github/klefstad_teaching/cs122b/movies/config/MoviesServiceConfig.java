@@ -7,4 +7,5 @@ import org.springframework.boot.context.properties.ConstructorBinding;
 @ConfigurationProperties(prefix = "movie")
 public class MoviesServiceConfig
 {
+
 }
