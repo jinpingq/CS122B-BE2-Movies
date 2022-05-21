@@ -3,21 +3,22 @@ package com.github.klefstad_teaching.cs122b.movies.model.response;
 import com.github.klefstad_teaching.cs122b.core.base.ResponseModel;
 import com.github.klefstad_teaching.cs122b.movies.model.data.Genre;
 import com.github.klefstad_teaching.cs122b.movies.model.data.Movie;
+import com.github.klefstad_teaching.cs122b.movies.model.data.MovieDetail;
 import com.github.klefstad_teaching.cs122b.movies.model.data.Person;
 
 import java.util.List;
 
 public class MovieSearchByIdResponse extends ResponseModel {
-    private Movie moive;
+    private MovieDetail movies;
     private List<Genre> genres;
     private List<Person> persons;
 
-    public Movie getMoive() {
-        return moive;
+    public MovieDetail getMovieDetail() {
+        return movies;
     }
 
-    public MovieSearchByIdResponse setMoive(Movie moive) {
-        this.moive = moive;
+    public MovieSearchByIdResponse setMovieDetail(MovieDetail movieDetail) {
+        this.movies = movieDetail;
         return this;
     }
 

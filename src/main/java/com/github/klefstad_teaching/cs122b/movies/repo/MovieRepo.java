@@ -3,10 +3,7 @@ package com.github.klefstad_teaching.cs122b.movies.repo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.klefstad_teaching.cs122b.core.error.ResultError;
 import com.github.klefstad_teaching.cs122b.core.result.MoviesResults;
-import com.github.klefstad_teaching.cs122b.movies.model.data.Genre;
-import com.github.klefstad_teaching.cs122b.movies.model.data.Movie;
-import com.github.klefstad_teaching.cs122b.movies.model.data.MovieOrderBy;
-import com.github.klefstad_teaching.cs122b.movies.model.data.Person;
+import com.github.klefstad_teaching.cs122b.movies.model.data.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -48,9 +45,7 @@ public class MovieRepo {
                     "JOIN movies.genre g on g.id = mg.genre_id ";
 
     private final static String MOVIE_WITH_PERSON =
-            "SELECT m.id,m.title,m.year,m.director_id,m.rating,m.num_votes,m.budget,m.revenue,m.overview," +
-                    "backdrop_path,m.poster_path,m.hidden " +
-                    " FROM movies.movie m " +
+            MOVIE_NO_GENRE +
                     " JOIN movies.movie_person mp on m.id = mp.movie_id ";
 
     public List<Movie> movieSearch(Optional<String> title, Optional<Integer> year, Optional<String> director,
@@ -62,7 +57,7 @@ public class MovieRepo {
 
         if (genre.isPresent()) {
             sql = new StringBuilder(MOVIE_WITH_GENRE);
-            sql.append("WHERE m.genre LIKE :genre ");
+            sql.append("WHERE g.name LIKE :genre ");
 
             String wildcardSearch = "%" + genre.get() + "%";
             source.addValue("genre", wildcardSearch, Types.VARCHAR);
@@ -116,7 +111,7 @@ public class MovieRepo {
         }
 
         MovieOrderBy orderby =
-                MovieOrderBy.fromString(orderBy, direction);
+                MovieOrderBy.fromString(orderBy, direction,"ID");
         sql.append(orderby.toSql());
 
         Integer offset = (page - 1) * limit;
@@ -129,19 +124,24 @@ public class MovieRepo {
                     source,
                     (rs, rowNum) ->
                             new Movie()
-                                    .setId(rs.getLong("id"))
-                                    .setTitle(rs.getString("title"))
+                                    .setHidden(rs.getBoolean("hidden"))
                                     .setYear(rs.getInt("year"))
                                     .setDirector(rs.getString("name"))
                                     .setRating(rs.getDouble("rating"))
+                                    .setId(rs.getLong("id"))
                                     .setBackdropPath(rs.getString("backdrop_path"))
-                                    .setPosterPath(rs.getString("poster_path"))
-                                    .setHidden(rs.getBoolean("hidden")));
+                                    .setTitle(rs.getString("title"))
+                                    .setPosterPath(rs.getString("poster_path")));
+            if (movies.isEmpty())
+                throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
             return movies;
         } catch (DataAccessException e) {
             throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
         }
     }
+
+
+
 
     public List<Movie> movieSearchPersonId(Long personId, Integer limit, Integer page,
                                            String orderBy, String direction, Boolean role_advanced)
@@ -155,7 +155,7 @@ public class MovieRepo {
             sql.append(" AND hidden = false ");
 
         MovieOrderBy orderby =
-                MovieOrderBy.fromString(orderBy, direction);
+                MovieOrderBy.fromString(orderBy, direction, "ID");
         sql.append(orderby.toSql());
         Integer offset = (page - 1) * limit;
         sql.append(" LIMIT " + limit + " OFFSET " + offset);
@@ -173,13 +173,15 @@ public class MovieRepo {
                                     .setBackdropPath(rs.getString("backdrop_path"))
                                     .setPosterPath(rs.getString("poster_path"))
                                     .setHidden(rs.getBoolean("hidden")));
+            if (movies.isEmpty())
+                throw new ResultError(MoviesResults.NO_MOVIES_WITH_PERSON_ID_FOUND);
             return movies;
         } catch (DataAccessException e) {
             throw new ResultError(MoviesResults.NO_MOVIES_WITH_PERSON_ID_FOUND);
         }
     }
 
-    public Movie movieSearchById(Long movieId, Boolean role_advanced)
+    public MovieDetail movieSearchById(Long movieId, Boolean role_advanced)
     {
         StringBuilder sql = new StringBuilder(MOVIE_NO_GENRE);
         MapSqlParameterSource source = new MapSqlParameterSource();
@@ -188,74 +190,78 @@ public class MovieRepo {
 
         if (!role_advanced)
             sql.append(" AND hidden = false ");
-
+        System.out.println("Movie SQL PRINT: "  + sql);
         try {
-            Movie movie = this.template.queryForObject(
+            MovieDetail movies = this.template.queryForObject(
                     sql.toString(),
                     source,
                     (rs, rowNum) ->
-                            new Movie()
+                            new MovieDetail()
                                     .setId(rs.getLong("id"))
                                     .setTitle(rs.getString("title"))
                                     .setYear(rs.getInt("year"))
-                                    .setDirector(rs.getString("director"))
+                                    .setDirector(rs.getString("name"))
                                     .setRating(rs.getDouble("rating"))
-                                    .setBackdropPath(rs.getString("backdropPath"))
-                                    .setPosterPath(rs.getString("posterPath"))
+                                    .setNumVotes(rs.getInt("num_votes"))
+                                    .setBudget(rs.getLong("budget"))
+                                    .setRevenue(rs.getLong("revenue"))
+                                    .setOverview(rs.getString("overview"))
+                                    .setBackdropPath(rs.getString("backdrop_path"))
+                                    .setPosterPath(rs.getString("poster_path"))
                                     .setHidden(rs.getBoolean("hidden")));
-            return movie;
+            return movies;
         } catch (DataAccessException e) {
-            throw new ResultError(MoviesResults.MOVIE_WITH_ID_FOUND);
+            throw new ResultError(MoviesResults.NO_MOVIE_WITH_ID_FOUND);
         }
     }
 
     public List<Genre> movieSearchForGenre(Long movieId)
     {
-        String str = "SELECT mg.movie_id, mg.genre_id, g.name " +
-                " FROM movies.genre g " +
-                " JOIN movies.movie_genre mg on g.id = mg.genre_id";
+        String str = "SELECT DISTINCT mg.genre_id, g.name " +
+                " FROM movies.movie_genre mg " +
+                " JOIN movies.genre g on g.id = mg.genre_id ";
         StringBuilder sql = new StringBuilder(str);
         MapSqlParameterSource source = new MapSqlParameterSource();
         sql.append(" WHERE mg.movie_id = :movie_id");
         source.addValue("movie_id", movieId, Types.INTEGER);
         sql.append(" ORDER BY g.name ");
-
+        System.out.println("Genre SQL PRINT: "  + sql);
         try {
             List<Genre> genres = this.template.query(
                     sql.toString(),
                     source,
                     (rs, rowNum) ->
                             new Genre()
-                                    .setId(rs.getLong("genre_id"))
+                                    .setGenreId(rs.getLong("genre_id"))
                                     .setName(rs.getString("name")));
             return genres;
         } catch (DataAccessException e) {
-            throw new ResultError(MoviesResults.MOVIE_WITH_ID_FOUND);  // genre not found?
+            throw new ResultError(MoviesResults.NO_MOVIE_WITH_ID_FOUND);  // genre not found?
         }
     }
 
     public List<Person> movieSearchForPerson(Long movieId)
     {
-        String str = "SELECT p.name, mp.movie_id, p.id " +
+        String str = "SELECT DISTINCT p.name, p.popularity, p.id, mp.movie_id " +
                 " FROM movies.person p " +
-                " JOIN movies.movie_person mp on p.id = mp.person_id";
+                " JOIN movies.movie_person mp on p.id = mp.person_id ";
         StringBuilder sql = new StringBuilder(str);
         MapSqlParameterSource source = new MapSqlParameterSource();
-        sql.append(" WHERE mp.movie_id = :movie_id");
+        sql.append(" WHERE mp.movie_id = :movie_id ");
         source.addValue("movie_id", movieId, Types.INTEGER);
-        sql.append(" ORDER BY p.popularity DESC ");
-
+        sql.append(" ORDER BY p.popularity DESC, p.id ");
+        System.out.println("Person SQL PRINT: "  + sql);
         try {
             List<Person> persons = this.template.query(
                     sql.toString(),
                     source,
                     (rs, rowNum) ->
                             new Person()
-                                    .setId(rs.getLong("id"))
+                                    .setPersonId(rs.getLong("id"))
                                     .setName(rs.getString("name")));
             return persons;
         } catch (DataAccessException e) {
-            throw new ResultError(MoviesResults.MOVIE_WITH_ID_FOUND);  // person not found?
+            throw new ResultError(MoviesResults.NO_MOVIE_WITH_ID_FOUND);  // person not found?
         }
     }
 
