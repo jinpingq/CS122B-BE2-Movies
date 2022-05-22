@@ -142,7 +142,6 @@ public class MovieRepo {
 
 
 
-
     public List<Movie> movieSearchPersonId(Long personId, Integer limit, Integer page,
                                            String orderBy, String direction, Boolean role_advanced)
     {
@@ -266,5 +265,96 @@ public class MovieRepo {
     }
 
     /////////////////PERSON SEARCH
+    public List<Person> personSearch(Optional<String> name, Optional<String> birthday,
+                                   Optional<String> movieTilte, Integer limit, Integer page,
+                                   String orderBy, String direction) {
+        StringBuilder sql;
+        MapSqlParameterSource source = new MapSqlParameterSource();
+        boolean whereAdded = false;
+
+        if (genre.isPresent()) {
+            sql = new StringBuilder(MOVIE_WITH_GENRE);
+            sql.append("WHERE g.name LIKE :genre ");
+
+            String wildcardSearch = "%" + genre.get() + "%";
+            source.addValue("genre", wildcardSearch, Types.VARCHAR);
+            whereAdded = true;
+
+        } else {
+            sql = new StringBuilder(MOVIE_NO_GENRE);
+        }
+        if (title.isPresent()) {
+            if (whereAdded) {
+                sql.append(" AND ");
+            } else {
+                sql.append(" WHERE ");
+                whereAdded = true;
+            }
+            String wildcardSearch = "%" + title.get() + "%";
+            sql.append(" m.title LIKE :title ");
+            source.addValue("title", wildcardSearch, Types.VARCHAR);
+        }
+        if (year.isPresent()) {
+            if (whereAdded) {
+                sql.append(" AND ");
+            } else {
+                sql.append(" WHERE ");
+                whereAdded = true;
+            }
+            sql.append(" m.year = :year ");
+            source.addValue("year", year.get(), Types.INTEGER);
+        }
+
+        if (director.isPresent()) {
+            if (whereAdded) {
+                sql.append(" AND ");
+            } else {
+                sql.append(" WHERE ");
+                whereAdded = true;
+            }
+            String wildcardSearch = "%" + director.get() + "%";
+            sql.append(" name LIKE :director ");
+            source.addValue("director", wildcardSearch, Types.VARCHAR);
+        }
+
+        if (!role_advanced) {
+            if (whereAdded) {
+                sql.append(" AND ");
+            } else {
+                sql.append(" WHERE ");
+                whereAdded = true;
+            }
+            sql.append(" hidden = false ");
+        }
+
+        MovieOrderBy orderby =
+                MovieOrderBy.fromString(orderBy, direction,"ID");
+        sql.append(orderby.toSql());
+
+        Integer offset = (page - 1) * limit;
+
+        sql.append(" LIMIT " + limit + " OFFSET " + offset);
+
+        try {
+            List<Movie> movies = this.template.query(
+                    sql.toString(),
+                    source,
+                    (rs, rowNum) ->
+                            new Movie()
+                                    .setHidden(rs.getBoolean("hidden"))
+                                    .setYear(rs.getInt("year"))
+                                    .setDirector(rs.getString("name"))
+                                    .setRating(rs.getDouble("rating"))
+                                    .setId(rs.getLong("id"))
+                                    .setBackdropPath(rs.getString("backdrop_path"))
+                                    .setTitle(rs.getString("title"))
+                                    .setPosterPath(rs.getString("poster_path")));
+            if (movies.isEmpty())
+                throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
+            return movies;
+        } catch (DataAccessException e) {
+            throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
+        }
+    }
 
 }
