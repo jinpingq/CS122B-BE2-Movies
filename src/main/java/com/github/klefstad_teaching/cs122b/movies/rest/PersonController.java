@@ -5,6 +5,8 @@ import com.github.klefstad_teaching.cs122b.core.security.JWTManager;
 import com.github.klefstad_teaching.cs122b.movies.model.data.Movie;
 import com.github.klefstad_teaching.cs122b.movies.model.data.Person;
 import com.github.klefstad_teaching.cs122b.movies.model.response.MovieSearchResponse;
+import com.github.klefstad_teaching.cs122b.movies.model.response.PersonSearchByPersonIdResponse;
+import com.github.klefstad_teaching.cs122b.movies.model.response.PersonSearchResponse;
 import com.github.klefstad_teaching.cs122b.movies.repo.MovieRepo;
 import com.github.klefstad_teaching.cs122b.movies.util.Validate;
 import com.nimbusds.jwt.SignedJWT;
@@ -34,7 +36,7 @@ public class PersonController
     }
 
     @GetMapping("/person/search")
-    public ResponseEntity<MovieSearchResponse> personSearch(
+    public ResponseEntity<PersonSearchResponse> personSearch(
             @AuthenticationPrincipal SignedJWT user,
             @RequestParam Optional<String> name,
             @RequestParam Optional<String> birthday,
@@ -47,15 +49,29 @@ public class PersonController
         Integer limit_val = validate.limitValidate(limit);
         Integer page_val = validate.pageValidate(page);
         String direction_str = validate.directionValidate(direction);
-        String orderBy_str = validate.orderByValidate(orderBy);
+        String orderBy_str = validate.orderByForPersonValidate(orderBy);
 
-        List<Person> persons = repo.personSearch(title, year, director,genre,
+        List<Person> persons = repo.personSearch(name, birthday, movieTitle,
                     limit_val, page_val, orderBy_str,direction_str);
 
-
-        MovieSearchResponse response = new MovieSearchResponse();
-        response.setMovies(movies);
-        response.setResult(MoviesResults.MOVIES_FOUND_WITHIN_SEARCH);
+        PersonSearchResponse response = new PersonSearchResponse();
+        response.setPersons(persons);
+        response.setResult(MoviesResults.PERSONS_FOUND_WITHIN_SEARCH);
         return response.toResponse();
     }
+
+    @GetMapping("/person/{personId}")
+    public ResponseEntity<PersonSearchByPersonIdResponse> personSearchById(
+            @AuthenticationPrincipal SignedJWT user,
+            @PathVariable Long personId) throws ParseException {
+
+
+        Person person = repo.personSearchByPersonId(personId);
+
+        PersonSearchByPersonIdResponse response = new PersonSearchByPersonIdResponse();
+        response.setPerson(person);
+        response.setResult(MoviesResults.PERSON_WITH_ID_FOUND);
+        return response.toResponse();
+    }
+
 }

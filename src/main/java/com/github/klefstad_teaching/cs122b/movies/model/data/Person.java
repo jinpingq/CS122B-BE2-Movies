@@ -3,7 +3,7 @@ package com.github.klefstad_teaching.cs122b.movies.model.data;
 import org.springframework.lang.Nullable;
 
 public class Person {
-    private Long personId;
+    private Long id;
     private String name;
     private @Nullable String birthday;
     private @Nullable String biography;
@@ -11,12 +11,12 @@ public class Person {
     private @Nullable Float popularity;
     private @Nullable String profilePath;
 
-    public Long getPersonId() {
-        return personId;
+    public Long getId() {
+        return id;
     }
 
-    public Person setPersonId(Long personId) {
-        this.personId = personId;
+    public Person setId(Long id) {
+        this.id = id;
         return this;
     }
 
@@ -45,6 +45,9 @@ public class Person {
     }
 
     public Person setBiography(@Nullable String biography) {
+        if (biography != null) {
+            biography = biography.replace("\r", "");
+        }
         this.biography = biography;
         return this;
     }

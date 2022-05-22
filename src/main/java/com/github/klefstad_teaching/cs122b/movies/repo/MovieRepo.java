@@ -47,6 +47,14 @@ public class MovieRepo {
     private final static String MOVIE_WITH_PERSON =
             MOVIE_NO_GENRE +
                     " JOIN movies.movie_person mp on m.id = mp.movie_id ";
+    private final static String PERSON_NO_MOVIE =
+            "SELECT DISTINCT p.id, p.name, p.birthday, p.biography, p.birthplace, p.popularity, p.profile_path " +
+                    " FROM movies.person p " ;
+    private final static String PERSON_WITH_MOVIE =
+            "SELECT DISTINCT p.id, p.name, p.birthday, p.biography, p.birthplace, p.popularity, p.profile_path " +
+                    " FROM movies.person p " +
+                    " JOIN movie_person mp on p.id = mp.person_id " +
+                    " JOIN movie m on m.id = mp.movie_id ";
 
     public List<Movie> movieSearch(Optional<String> title, Optional<Integer> year, Optional<String> director,
                                    Optional<String> genre, Integer limit, Integer page,
@@ -139,8 +147,6 @@ public class MovieRepo {
             throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
         }
     }
-
-
 
     public List<Movie> movieSearchPersonId(Long personId, Integer limit, Integer page,
                                            String orderBy, String direction, Boolean role_advanced)
@@ -256,7 +262,7 @@ public class MovieRepo {
                     source,
                     (rs, rowNum) ->
                             new Person()
-                                    .setPersonId(rs.getLong("id"))
+                                    .setId(rs.getLong("id"))
                                     .setName(rs.getString("name")));
             return persons;
         } catch (DataAccessException e) {
@@ -272,89 +278,92 @@ public class MovieRepo {
         MapSqlParameterSource source = new MapSqlParameterSource();
         boolean whereAdded = false;
 
-        if (genre.isPresent()) {
-            sql = new StringBuilder(MOVIE_WITH_GENRE);
-            sql.append("WHERE g.name LIKE :genre ");
+        if (movieTilte.isPresent()) {
+            sql = new StringBuilder(PERSON_WITH_MOVIE);
+            sql.append(" WHERE m.title LIKE :movie_title ");
 
-            String wildcardSearch = "%" + genre.get() + "%";
-            source.addValue("genre", wildcardSearch, Types.VARCHAR);
+            String wildcardSearch = "%" + movieTilte.get() + "%";
+            source.addValue("movie_title", wildcardSearch, Types.VARCHAR);
             whereAdded = true;
 
         } else {
-            sql = new StringBuilder(MOVIE_NO_GENRE);
+            sql = new StringBuilder(PERSON_NO_MOVIE);
         }
-        if (title.isPresent()) {
+        if (name.isPresent()) {
             if (whereAdded) {
                 sql.append(" AND ");
             } else {
                 sql.append(" WHERE ");
                 whereAdded = true;
             }
-            String wildcardSearch = "%" + title.get() + "%";
-            sql.append(" m.title LIKE :title ");
-            source.addValue("title", wildcardSearch, Types.VARCHAR);
+            String wildcardSearch = "%" + name.get() + "%";
+            sql.append(" p.name LIKE :person_name ");
+            source.addValue("person_name", wildcardSearch, Types.VARCHAR);
         }
-        if (year.isPresent()) {
+        if (birthday.isPresent()) {
             if (whereAdded) {
                 sql.append(" AND ");
             } else {
                 sql.append(" WHERE ");
                 whereAdded = true;
             }
-            sql.append(" m.year = :year ");
-            source.addValue("year", year.get(), Types.INTEGER);
+            sql.append(" p.birthday = :person_birthday ");
+            source.addValue("person_birthday", birthday.get(), Types.VARCHAR);
         }
-
-        if (director.isPresent()) {
-            if (whereAdded) {
-                sql.append(" AND ");
-            } else {
-                sql.append(" WHERE ");
-                whereAdded = true;
-            }
-            String wildcardSearch = "%" + director.get() + "%";
-            sql.append(" name LIKE :director ");
-            source.addValue("director", wildcardSearch, Types.VARCHAR);
-        }
-
-        if (!role_advanced) {
-            if (whereAdded) {
-                sql.append(" AND ");
-            } else {
-                sql.append(" WHERE ");
-                whereAdded = true;
-            }
-            sql.append(" hidden = false ");
-        }
-
+        System.out.println("SQLORDER PRINTING: " + orderBy + direction);
         MovieOrderBy orderby =
-                MovieOrderBy.fromString(orderBy, direction,"ID");
+                MovieOrderBy.fromString(orderBy, direction,"PID");
+
         sql.append(orderby.toSql());
 
         Integer offset = (page - 1) * limit;
-
         sql.append(" LIMIT " + limit + " OFFSET " + offset);
+        System.out.println("SQL PRINTING: " + sql.toString());
 
         try {
-            List<Movie> movies = this.template.query(
+            List<Person> persons = this.template.query(
                     sql.toString(),
                     source,
                     (rs, rowNum) ->
-                            new Movie()
-                                    .setHidden(rs.getBoolean("hidden"))
-                                    .setYear(rs.getInt("year"))
-                                    .setDirector(rs.getString("name"))
-                                    .setRating(rs.getDouble("rating"))
+                            new Person()
                                     .setId(rs.getLong("id"))
-                                    .setBackdropPath(rs.getString("backdrop_path"))
-                                    .setTitle(rs.getString("title"))
-                                    .setPosterPath(rs.getString("poster_path")));
-            if (movies.isEmpty())
-                throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
-            return movies;
+                                    .setName(rs.getString("name"))
+                                    .setBirthday(rs.getString("birthday"))
+                                    .setBiography(rs.getString("biography"))
+                                    .setBirthplace(rs.getString("birthplace"))
+                                    .setPopularity(rs.getFloat("popularity"))
+                                    .setProfilePath(rs.getString("profile_path")));
+            if (persons.isEmpty())
+                throw new ResultError(MoviesResults.NO_PERSONS_FOUND_WITHIN_SEARCH);
+            return persons;
         } catch (DataAccessException e) {
             throw new ResultError(MoviesResults.NO_MOVIES_FOUND_WITHIN_SEARCH);
         }
     }
 
+    public Person personSearchByPersonId(long personId) {
+        StringBuilder sql = new StringBuilder(PERSON_NO_MOVIE);;
+        MapSqlParameterSource source = new MapSqlParameterSource();
+        sql.append(" WHERE p.id = :person_id");
+        source.addValue("person_id", personId, Types.INTEGER);
+
+        System.out.println("SQL PRINTING: " + sql.toString());
+        try {
+            Person person = this.template.queryForObject(
+                    sql.toString(),
+                    source,
+                    (rs, rowNum) ->
+                            new Person()
+                                    .setId(rs.getLong("id"))
+                                    .setName(rs.getString("name"))
+                                    .setBirthday(rs.getString("birthday"))
+                                    .setBiography(rs.getString("biography"))
+                                    .setBirthplace(rs.getString("birthplace"))
+                                    .setPopularity(rs.getFloat("popularity"))
+                                    .setProfilePath(rs.getString("profile_path")));
+
+        return person;
+        } catch (DataAccessException e) {
+            throw new ResultError(MoviesResults.NO_PERSON_WITH_ID_FOUND); }
+    }
 }

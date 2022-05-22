@@ -45,4 +45,12 @@ public class Validate
         return order;
     }
 
+    public String orderByForPersonValidate(Optional<String> orderby_request)
+    {
+        String order = orderby_request.orElse("NAME");
+        order = order.toUpperCase().trim();
+        if (! (order.equals("NAME") || order.equals("POPULARITY") || order.equals("BIRTHDAY")))
+            throw new ResultError(MoviesResults.INVALID_ORDER_BY);
+        return order;
+    }
 }
