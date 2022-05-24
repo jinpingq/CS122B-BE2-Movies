@@ -1,10 +1,7 @@
 package com.github.klefstad_teaching.cs122b.movies.rest;
 
 import com.github.klefstad_teaching.cs122b.core.security.JWTManager;
-import com.github.klefstad_teaching.cs122b.movies.model.data.Genre;
-import com.github.klefstad_teaching.cs122b.movies.model.data.Movie;
-import com.github.klefstad_teaching.cs122b.movies.model.data.MovieDetail;
-import com.github.klefstad_teaching.cs122b.movies.model.data.Person;
+import com.github.klefstad_teaching.cs122b.movies.model.data.*;
 import com.github.klefstad_teaching.cs122b.movies.model.response.MovieSearchByIdResponse;
 import com.github.klefstad_teaching.cs122b.movies.model.response.MovieSearchResponse;
 import com.github.klefstad_teaching.cs122b.movies.repo.MovieRepo;
@@ -103,17 +100,17 @@ public class MovieController
             @PathVariable Long movieId) throws ParseException {
 
         List<String> roles = user.getJWTClaimsSet().getStringListClaim(JWTManager.CLAIM_ROLES);
-        MovieDetail movie;
+        MovieDetail movies;
 
         if (roles.contains("ADMIN") || roles.contains("EMPLOYEE"))
-            movie = repo.movieSearchById(movieId,true);
+            movies = repo.movieSearchById(movieId,true);
         else
-            movie = repo.movieSearchById(movieId,false);
+            movies = repo.movieSearchById(movieId,false);
 
         List<Genre> genres = repo.movieSearchForGenre(movieId);
-        List<Person> persons = repo.movieSearchForPerson(movieId);
+        List<Persons> persons = repo.movieSearchForPerson(movieId);
         MovieSearchByIdResponse response = new MovieSearchByIdResponse();
-        response.setMovieDetail(movie);
+        response.setMovie(movies);
         response.setGenres(genres);
         response.setPersons(persons);
         System.out.println("P888888888888");

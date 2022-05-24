@@ -237,7 +237,7 @@ public class MovieRepo {
                     source,
                     (rs, rowNum) ->
                             new Genre()
-                                    .setGenreId(rs.getLong("genre_id"))
+                                    .setId(rs.getLong("genre_id"))
                                     .setName(rs.getString("name")));
             return genres;
         } catch (DataAccessException e) {
@@ -245,7 +245,7 @@ public class MovieRepo {
         }
     }
 
-    public List<Person> movieSearchForPerson(Long movieId)
+    public List<Persons> movieSearchForPerson(Long movieId)
     {
         String str = "SELECT DISTINCT p.name, p.popularity, p.id, mp.movie_id " +
                 " FROM movies.person p " +
@@ -257,11 +257,11 @@ public class MovieRepo {
         sql.append(" ORDER BY p.popularity DESC, p.id ");
         System.out.println("Person SQL PRINT: "  + sql);
         try {
-            List<Person> persons = this.template.query(
+            List<Persons> persons = this.template.query(
                     sql.toString(),
                     source,
                     (rs, rowNum) ->
-                            new Person()
+                            new Persons()
                                     .setId(rs.getLong("id"))
                                     .setName(rs.getString("name")));
             return persons;
